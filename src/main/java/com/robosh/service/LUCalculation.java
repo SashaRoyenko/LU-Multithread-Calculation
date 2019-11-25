@@ -33,24 +33,15 @@ public class LUCalculation {
         matrixU = copyArray(matrix.getMatrixA());
         matrixL = new double[size][size];
 
-        for (int i = 0; i < size; i++) {
-            for (int j = i; j < size; j++) {
-                matrixL[j][i] = matrixU[j][i] / matrixU[i][i];
-            }
-        }
+        Thread[] thread = new Thread[numberOfProcessors];
+        numberOfProcessors = Math.min(size, numberOfProcessors);
+        int startIndex = 1;
 
-        for (int k = 1; k < size; k++) {
-            for (int i = k - 1; i < size; i++) {
-                for (int j = i; j < size; j++) {
-                    matrixL[j][i] = matrixU[j][i] / matrixU[i][i];
-                }
-            }
+        for (int i = 1; i < numberOfProcessors; i++) {
 
-            for (int i = k; i < size; i++) {
-                for (int j = k - 1; j < size; j++) {
-                    matrixU[i][j] = matrixU[i][j] - matrixL[i][k - 1] * matrixU[k - 1][j];
-                }
-            }
+            thread[i] = new Thread(calculateLU(size / numberOfProcessors * i,
+                    i == numberOfProcessors - 1 ? size : size / numberOfProcessors * (i + 1)));
+            thread[i].start();
         }
     }
 
@@ -98,4 +89,22 @@ public class LUCalculation {
         return result;
     }
 
+    private Runnable calculateLU(int startIndex, int endIndex) {
+        return () -> {
+            for (int k = startIndex; k < endIndex; k++) {
+                for (int i = k - 1; i < size; i++) {
+                    for (int j = i; j < size; j++) {
+                        matrixL[j][i] = matrixU[j][i] / matrixU[i][i];
+                    }
+                }
+
+                for (int i = k; i < size; i++) {
+                    for (int j = k - 1; j < size; j++) {
+                        matrixU[i][j] = matrixU[i][j] - matrixL[i][k - 1] * matrixU[k - 1][j];
+                    }
+                }
+            }
+        };
+    }
 }
+

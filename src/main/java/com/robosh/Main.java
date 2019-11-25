@@ -28,6 +28,8 @@ public class Main {
         System.out.println(Arrays.deepEquals(calculation.multipleMatrix(calculation.getMatrixL(), calculation.getMatrixU()), matrixA));
 
         System.out.println(MatrixReader.readMatrixFromExternalFile("C:\\Users\\Oleksandr_Roienko\\IdeaProjects\\Parallel_Calculation\\src\\main\\resources\\matrix"));
-        System.out.println(MatrixReader.readMatrixFromInternalFile("matrix"));
+        SystemOfLinearEquations fourDimensionalSlau = MatrixReader.readMatrixFromInternalFile("matrix4");
+        LUCalculation calculation4 = LUCalculation.from(fourDimensionalSlau);
+        System.out.println(Arrays.toString(calculation4.getMatrixX()));
     }
 }
