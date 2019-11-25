@@ -1,7 +1,13 @@
 package com.robosh;
 
+import com.robosh.entity.SystemOfLinearEquations;
+import com.robosh.service.LUCalculation;
+import com.robosh.service.MatrixReader;
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.Arrays;
 
+@Slf4j
 public class Main {
     public static void main(String[] args) {
         double[][] matrixA = new double[][]{
@@ -15,15 +21,13 @@ public class Main {
         SystemOfLinearEquations matrix = new SystemOfLinearEquations(3, matrixA, matrixB);
         LUCalculation calculation = LUCalculation.from(matrix);
 
-        double[][] L = calculation.calculateL();
-        double[][] U = calculation.calculateU();
-        double[] Y = calculation.calculateY();
-        double[] X = calculation.calculateX();
+        System.out.println("L : " + Arrays.deepToString(calculation.getMatrixL()));
+        System.out.println("U: " + Arrays.deepToString(calculation.getMatrixU()));
+        System.out.println("Y: " + Arrays.toString(calculation.getMatrixY()));
+        System.out.println("X: " + Arrays.toString(calculation.getMatrixX()));
+        System.out.println(Arrays.deepEquals(calculation.multipleMatrix(calculation.getMatrixL(), calculation.getMatrixU()), matrixA));
 
-        System.out.println("L : " + Arrays.deepToString(L));
-        System.out.println("U: " + Arrays.deepToString(U));
-        System.out.println("Y: " + Arrays.toString(Y));
-        System.out.println("X: " + Arrays.toString(X));
-        System.out.println(Arrays.deepEquals(calculation.multipleMatrix(L, U), matrixA));
+        System.out.println(MatrixReader.readMatrixFromExternalFile("C:\\Users\\Oleksandr_Roienko\\IdeaProjects\\Parallel_Calculation\\src\\main\\resources\\matrix"));
+        System.out.println(MatrixReader.readMatrixFromInternalFile("matrix"));
     }
 }

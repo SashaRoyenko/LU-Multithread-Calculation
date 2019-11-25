@@ -1,4 +1,4 @@
-package com.robosh;
+package com.robosh.entity;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 public class SystemOfLinearEquations {
     private double[][] matrixA;
     private int size;
-    private double[] resultB;
+    private double[] matrixB;
 
     public SystemOfLinearEquations(int size) {
         this.size = size;
@@ -19,6 +19,6 @@ public class SystemOfLinearEquations {
     public SystemOfLinearEquations(int size, double[][] matrixA, double[] resultB) {
         this.matrixA = matrixA;
         this.size = size;
-        this.resultB = resultB;
+        this.matrixB = resultB;
     }
 }

@@ -1,5 +1,6 @@
-package com.robosh;
+package com.robosh.service;
 
+import com.robosh.entity.SystemOfLinearEquations;
 import lombok.Getter;
 
 import java.util.Arrays;
@@ -9,49 +10,28 @@ public class LUCalculation {
     private SystemOfLinearEquations matrix;
     private int size;
     private int numberOfProcessors;
+    private double[][] matrixL;
+    private double[][] matrixU;
+    private double[] matrixY;
+    private double[] matrixX;
 
     private LUCalculation(SystemOfLinearEquations matrix) {
         this.matrix = matrix;
         size = matrix.getSize();
         numberOfProcessors = Runtime.getRuntime().availableProcessors();
+        calculateLU();
+        calculateY();
+        calculateX();
     }
 
     public static LUCalculation from(SystemOfLinearEquations matrix) {
         return new LUCalculation(matrix);
     }
 
-    public double[][] calculateL() {
+    private void calculateLU() {
 
-        double[][] matrixU = copyArray(matrix.getMatrixA());
-        double[][] matrixL = new double[size][size];
-
-        for (int i = 0; i < size; i++) {
-            for (int j = i; j < size; j++) {
-                matrixL[j][i] = matrixU[j][i] / matrixU[i][i];
-            }
-        }
-
-        for (int k = 1; k < size; k++) {
-            for (int i = k - 1; i < size; i++) {
-                for (int j = i; j < size; j++) {
-                    matrixL[j][i] = matrixU[j][i] / matrixU[i][i];
-                }
-            }
-
-            for (int i = k; i < size; i++) {
-                for (int j = k - 1; j < size; j++) {
-                    matrixU[i][j] = matrixU[i][j] - matrixL[i][k - 1] * matrixU[k - 1][j];
-                }
-            }
-        }
-
-        return matrixL;
-    }
-
-    public double[][] calculateU() {
-
-        double[][] matrixU = copyArray(matrix.getMatrixA());
-        double[][] matrixL = new double[size][size];
+        matrixU = copyArray(matrix.getMatrixA());
+        matrixL = new double[size][size];
 
         for (int i = 0; i < size; i++) {
             for (int j = i; j < size; j++) {
@@ -72,13 +52,11 @@ public class LUCalculation {
                 }
             }
         }
-        return matrixU;
     }
 
-    public double[] calculateY() {
-        double[] matrixY = new double[size];
-        double[][] matrixL = calculateL();
-        double[] matrixB = matrix.getResultB();
+    private void calculateY() {
+        matrixY = new double[size];
+        double[] matrixB = matrix.getMatrixB();
         double sum;
         matrixY[0] = matrixB[0];
         for (int i = 1; i < size; i++) {
@@ -88,13 +66,10 @@ public class LUCalculation {
             }
             matrixY[i] = (matrixB[i] - sum) / matrixL[i][i];
         }
-        return matrixY;
     }
 
-    public double[] calculateX() {
-        double[] matrixX = new double[size];
-        double[] matrixY = calculateY();
-        double[][] matrixU = calculateU();
+    private void calculateX() {
+        matrixX = new double[size];
         double sum;
         matrixX[size - 1] = matrixY[size - 1] / matrixU[size - 1][size - 1];
         for (int i = size - 2; i >= 0; i--) {
@@ -104,7 +79,6 @@ public class LUCalculation {
             }
             matrixX[i] = (matrixY[i] - sum) / matrixU[i][i];
         }
-        return matrixX;
     }
 
     public double[][] multipleMatrix(double[][] matrixA, double[][] matrixB) {
@@ -124,7 +98,4 @@ public class LUCalculation {
         return result;
     }
 
-    public double[] getResult() {
-        return new double[size];
-    }
 }
