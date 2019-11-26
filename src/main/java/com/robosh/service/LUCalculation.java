@@ -2,6 +2,7 @@ package com.robosh.service;
 
 import com.robosh.entity.SystemOfLinearEquations;
 import lombok.Getter;
+import lombok.SneakyThrows;
 
 import java.util.Arrays;
 
@@ -28,20 +29,28 @@ public class LUCalculation {
         return new LUCalculation(matrix);
     }
 
+    @SneakyThrows
     private void calculateLU() {
 
         matrixU = copyArray(matrix.getMatrixA());
         matrixL = new double[size][size];
 
-        Thread[] thread = new Thread[numberOfProcessors];
-        numberOfProcessors = Math.min(size, numberOfProcessors);
-        int startIndex = 1;
-
-        for (int i = 1; i < numberOfProcessors; i++) {
-
-            thread[i] = new Thread(calculateLU(size / numberOfProcessors * i,
-                    i == numberOfProcessors - 1 ? size : size / numberOfProcessors * (i + 1)));
+        int neededNumberOfProcessors = Math.min(size, numberOfProcessors) - 1;
+        Thread[] thread = new Thread[neededNumberOfProcessors];
+        System.err.println("Processors: " + numberOfProcessors);
+        System.err.println("Needed number of Processors: " + neededNumberOfProcessors);
+        int startIndex;
+        int endIndex;
+        for (int i = 0; i < neededNumberOfProcessors; i++) {
+            startIndex = size / neededNumberOfProcessors * i + 1;
+            endIndex = i == neededNumberOfProcessors - 1 ? size : size / neededNumberOfProcessors * (i + 1);
+            thread[i] = new Thread(calculateLU(startIndex,
+                    endIndex));
             thread[i].start();
+
+        }
+        for (int i = 0; i < neededNumberOfProcessors; i++) {
+            thread[i].join();
         }
     }
 
@@ -91,7 +100,7 @@ public class LUCalculation {
 
     private Runnable calculateLU(int startIndex, int endIndex) {
         return () -> {
-            for (int k = startIndex; k < endIndex; k++) {
+            for (int k = startIndex; k <= endIndex; k++) {
                 for (int i = k - 1; i < size; i++) {
                     for (int j = i; j < size; j++) {
                         matrixL[j][i] = matrixU[j][i] / matrixU[i][i];

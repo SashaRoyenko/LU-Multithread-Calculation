@@ -19,17 +19,25 @@ public class Main {
         double[] matrixB = new double[]{0, 3, -4};
 
         SystemOfLinearEquations matrix = new SystemOfLinearEquations(3, matrixA, matrixB);
-        LUCalculation calculation = LUCalculation.from(matrix);
+//        LUCalculation calculation = LUCalculation.from(matrix);
 
-        System.out.println("L : " + Arrays.deepToString(calculation.getMatrixL()));
-        System.out.println("U: " + Arrays.deepToString(calculation.getMatrixU()));
-        System.out.println("Y: " + Arrays.toString(calculation.getMatrixY()));
-        System.out.println("X: " + Arrays.toString(calculation.getMatrixX()));
-        System.out.println(Arrays.deepEquals(calculation.multipleMatrix(calculation.getMatrixL(), calculation.getMatrixU()), matrixA));
+//        System.out.println("L : " + Arrays.deepToString(calculation.getMatrixL()));
+//        System.out.println("U: " + Arrays.deepToString(calculation.getMatrixU()));
+//        System.out.println("Y: " + Arrays.toString(calculation.getMatrixY()));
+//        System.out.println("X: " + Arrays.toString(calculation.getMatrixX()));
+//        System.out.println(Arrays.deepEquals(calculation.multipleMatrix(calculation.getMatrixL(), calculation.getMatrixU()), matrixA));
+//
+//        System.out.println(MatrixReader.readMatrixFromExternalFile("C:\\Users\\Oleksandr_Roienko\\IdeaProjects\\Parallel_Calculation\\src\\main\\resources\\matrix"));
+//        SystemOfLinearEquations fourDimensionalSlau = MatrixReader.readMatrixFromInternalFile("matrix4");
+//        LUCalculation calculation4 = LUCalculation.from(fourDimensionalSlau);
+//        System.out.println(Arrays.toString(calculation4.getMatrixX()));
+//
+//        SystemOfLinearEquations fiveDimensionalSlau = MatrixReader.readMatrixFromInternalFile("matrix5");
+//        LUCalculation calculation5 = LUCalculation.from(fiveDimensionalSlau);
+//        System.out.println(Arrays.toString(calculation5.getMatrixX()));
 
-        System.out.println(MatrixReader.readMatrixFromExternalFile("C:\\Users\\Oleksandr_Roienko\\IdeaProjects\\Parallel_Calculation\\src\\main\\resources\\matrix"));
-        SystemOfLinearEquations fourDimensionalSlau = MatrixReader.readMatrixFromInternalFile("matrix4");
-        LUCalculation calculation4 = LUCalculation.from(fourDimensionalSlau);
-        System.out.println(Arrays.toString(calculation4.getMatrixX()));
+        SystemOfLinearEquations nineDimensionalSlau = MatrixReader.readMatrixFromInternalFile("matrix9");
+        LUCalculation calculation9 = LUCalculation.from(nineDimensionalSlau);
+        System.out.println(Arrays.toString(calculation9.getMatrixX()));
     }
 }
