@@ -5,6 +5,9 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 
 import java.util.Arrays;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Getter
 public class LUCalculation {
@@ -15,14 +18,12 @@ public class LUCalculation {
     private double[][] matrixU;
     private double[] matrixY;
     private double[] matrixX;
-
+    private ReentrantLock reentrantLock;
     private LUCalculation(SystemOfLinearEquations matrix) {
         this.matrix = matrix;
         size = matrix.getSize();
-        numberOfProcessors = Runtime.getRuntime().availableProcessors();
-        calculateLU();
-        calculateY();
-        calculateX();
+        numberOfProcessors = Math.min(size, Runtime.getRuntime().availableProcessors());
+        startCalculation();
     }
 
     public static LUCalculation from(SystemOfLinearEquations matrix) {
@@ -34,40 +35,45 @@ public class LUCalculation {
 
         matrixU = copyArray(matrix.getMatrixA());
         matrixL = new double[size][size];
-
-        int neededNumberOfProcessors = Math.min(size, numberOfProcessors) - 1;
-        Thread[] thread = new Thread[neededNumberOfProcessors];
-        System.err.println("Processors: " + numberOfProcessors);
-        System.err.println("Needed number of Processors: " + neededNumberOfProcessors);
+        reentrantLock = new ReentrantLock();
+        Thread[] thread = new Thread[numberOfProcessors - 1];
         int startIndex;
         int endIndex;
-        for (int i = 0; i < neededNumberOfProcessors; i++) {
-            startIndex = size / neededNumberOfProcessors * i + 1;
-            endIndex = i == neededNumberOfProcessors - 1 ? size : size / neededNumberOfProcessors * (i + 1);
+        for (int i = 0; i < numberOfProcessors - 1; i++) {
+            startIndex = size / numberOfProcessors * i + 1;
+            endIndex = i == numberOfProcessors - 1 ? size : size / numberOfProcessors * (i + 1);
             thread[i] = new Thread(calculateLU(startIndex,
                     endIndex));
             thread[i].start();
 
         }
-        for (int i = 0; i < neededNumberOfProcessors; i++) {
+        for (int i = 0; i < numberOfProcessors - 1; i++) {
             thread[i].join();
         }
     }
 
+    @SneakyThrows
     private void calculateY() {
         matrixY = new double[size];
-        double[] matrixB = matrix.getMatrixB();
-        double sum;
-        matrixY[0] = matrixB[0];
-        for (int i = 1; i < size; i++) {
-            sum = 0.;
-            for (int j = 0; j < i; j++) {
-                sum += matrixY[j] * matrixL[i][j];
-            }
-            matrixY[i] = (matrixB[i] - sum) / matrixL[i][i];
+        Thread[] thread = new Thread[numberOfProcessors - 1];
+        System.err.println("Processors: " + (numberOfProcessors - 1));
+        int startIndex;
+        int endIndex;
+        matrixY[0] = matrix.getMatrixB()[0];
+        for (int i = 0; i < numberOfProcessors - 1; i++) {
+            startIndex = size / numberOfProcessors * i + 1;
+            endIndex = i == numberOfProcessors - 1 ? size : size / numberOfProcessors * (i + 1);
+            thread[i] = new Thread(calculateY(startIndex,
+                    endIndex));
+            thread[i].start();
+
+        }
+        for (int i = 0; i < numberOfProcessors - 1; i++) {
+            thread[i].join();
         }
     }
 
+    @SneakyThrows
     private void calculateX() {
         matrixX = new double[size];
         double sum;
@@ -79,6 +85,18 @@ public class LUCalculation {
             }
             matrixX[i] = (matrixY[i] - sum) / matrixU[i][i];
         }
+    }
+
+    @SneakyThrows
+    private void startCalculation() {
+//        ExecutorService threadPool = Executors.newFixedThreadPool(3);
+//        threadPool.execute(this::calculateLU);
+//        threadPool.execute(this::calculateY);
+//        threadPool.execute(this::calculateX);
+//        threadPool.shutdown();
+        calculateLU();
+        calculateY();
+        calculateX();
     }
 
     public double[][] multipleMatrix(double[][] matrixA, double[][] matrixB) {
@@ -96,6 +114,32 @@ public class LUCalculation {
             result[i] = Arrays.copyOf(arrayToCopy[i], arrayToCopy.length);
         }
         return result;
+    }
+
+    private Runnable calculateY(int startIndex, int endIndex) {
+        return () -> {
+            double sum;
+            for (int i = startIndex; i <= endIndex; i++) {
+                sum = 0.;
+                for (int j = 0; j < i; j++) {
+                    sum += matrixY[j] * matrixL[i][j];
+                }
+                matrixY[i] = (matrix.getMatrixB()[i] - sum) / matrixL[i][i];
+            }
+        };
+    }
+
+    private Runnable calculateX(int startIndex, int endIndex) {
+        return () -> {
+            double sum;
+            for (int i = endIndex - 2; i >= startIndex; i--) {
+                sum = 0.;
+                for (int j = size - 1; j >= i; j--) {
+                    sum += matrixX[j] * matrixU[i][j];
+                }
+                matrixX[i] = (matrixY[i] - sum) / matrixU[i][i];
+            }
+        };
     }
 
     private Runnable calculateLU(int startIndex, int endIndex) {
