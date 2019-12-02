@@ -7,7 +7,7 @@ import lombok.SneakyThrows;
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.TimeUnit;
 
 @Getter
 public class LUCalculation {
@@ -18,7 +18,7 @@ public class LUCalculation {
     private double[][] matrixU;
     private double[] matrixY;
     private double[] matrixX;
-    private ReentrantLock reentrantLock;
+
     private LUCalculation(SystemOfLinearEquations matrix) {
         this.matrix = matrix;
         size = matrix.getSize();
@@ -30,50 +30,38 @@ public class LUCalculation {
         return new LUCalculation(matrix);
     }
 
-    @SneakyThrows
     private void calculateLU() {
-
         matrixU = copyArray(matrix.getMatrixA());
         matrixL = new double[size][size];
-        reentrantLock = new ReentrantLock();
-        Thread[] thread = new Thread[numberOfProcessors - 1];
-        int startIndex;
-        int endIndex;
-        for (int i = 0; i < numberOfProcessors - 1; i++) {
-            startIndex = size / numberOfProcessors * i + 1;
-            endIndex = i == numberOfProcessors - 1 ? size : size / numberOfProcessors * (i + 1);
-            thread[i] = new Thread(calculateLU(startIndex,
-                    endIndex));
-            thread[i].start();
 
-        }
-        for (int i = 0; i < numberOfProcessors - 1; i++) {
-            thread[i].join();
+        for (int k = 1; k < size; k++) {
+            for (int i = k - 1; i < size; i++) {
+                for (int j = i; j < size; j++) {
+                    matrixL[j][i] = matrixU[j][i] / matrixU[i][i];
+                }
+            }
+
+            for (int i = k; i < size; i++) {
+                for (int j = k - 1; j < size; j++) {
+                    matrixU[i][j] = matrixU[i][j] - matrixL[i][k - 1] * matrixU[k - 1][j];
+                }
+            }
         }
     }
 
-    @SneakyThrows
     private void calculateY() {
         matrixY = new double[size];
-        Thread[] thread = new Thread[numberOfProcessors - 1];
-        System.err.println("Processors: " + (numberOfProcessors - 1));
-        int startIndex;
-        int endIndex;
         matrixY[0] = matrix.getMatrixB()[0];
-        for (int i = 0; i < numberOfProcessors - 1; i++) {
-            startIndex = size / numberOfProcessors * i + 1;
-            endIndex = i == numberOfProcessors - 1 ? size : size / numberOfProcessors * (i + 1);
-            thread[i] = new Thread(calculateY(startIndex,
-                    endIndex));
-            thread[i].start();
-
-        }
-        for (int i = 0; i < numberOfProcessors - 1; i++) {
-            thread[i].join();
+        double sum;
+        for (int i = 1; i < size; i++) {
+            sum = 0.;
+            for (int j = 0; j < i; j++) {
+                sum += matrixY[j] * matrixL[i][j];
+            }
+            matrixY[i] = (matrix.getMatrixB()[i] - sum) / matrixL[i][i];
         }
     }
 
-    @SneakyThrows
     private void calculateX() {
         matrixX = new double[size];
         double sum;
@@ -87,75 +75,33 @@ public class LUCalculation {
         }
     }
 
-    @SneakyThrows
     private void startCalculation() {
-//        ExecutorService threadPool = Executors.newFixedThreadPool(3);
-//        threadPool.execute(this::calculateLU);
-//        threadPool.execute(this::calculateY);
-//        threadPool.execute(this::calculateX);
-//        threadPool.shutdown();
         calculateLU();
         calculateY();
         calculateX();
     }
 
-    public double[][] multipleMatrix(double[][] matrixA, double[][] matrixB) {
-        double[][] result = new double[size][size];
-        for (int i = 0; i < size; i++)
-            for (int j = 0; j < size; j++)
-                for (int k = 0; k < size; k++)
-                    result[i][j] += matrixA[i][k] * matrixB[k][j];
-        return result;
-    }
-
+    @SneakyThrows
     private double[][] copyArray(double[][] arrayToCopy) {
+        ExecutorService executorService = Executors.newFixedThreadPool(numberOfProcessors);
         double[][] result = new double[arrayToCopy.length][arrayToCopy.length];
-        for (int i = 0; i < arrayToCopy.length; i++) {
-            result[i] = Arrays.copyOf(arrayToCopy[i], arrayToCopy.length);
+        int startIndex;
+        int endIndex;
+        for (int i = 0; i < numberOfProcessors; i++) {
+            startIndex = size / numberOfProcessors * i;
+            endIndex = size / numberOfProcessors * i;
+            executorService.execute(copyArray(arrayToCopy, result, startIndex, endIndex));
         }
+        executorService.shutdown();
+        executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
         return result;
     }
 
-    private Runnable calculateY(int startIndex, int endIndex) {
-        return () -> {
-            double sum;
+    private Runnable copyArray(double[][] arrayToCopy, double[][] result, int startIndex, int endIndex) {
+        return () ->
+        {
             for (int i = startIndex; i <= endIndex; i++) {
-                sum = 0.;
-                for (int j = 0; j < i; j++) {
-                    sum += matrixY[j] * matrixL[i][j];
-                }
-                matrixY[i] = (matrix.getMatrixB()[i] - sum) / matrixL[i][i];
-            }
-        };
-    }
-
-    private Runnable calculateX(int startIndex, int endIndex) {
-        return () -> {
-            double sum;
-            for (int i = endIndex - 2; i >= startIndex; i--) {
-                sum = 0.;
-                for (int j = size - 1; j >= i; j--) {
-                    sum += matrixX[j] * matrixU[i][j];
-                }
-                matrixX[i] = (matrixY[i] - sum) / matrixU[i][i];
-            }
-        };
-    }
-
-    private Runnable calculateLU(int startIndex, int endIndex) {
-        return () -> {
-            for (int k = startIndex; k <= endIndex; k++) {
-                for (int i = k - 1; i < size; i++) {
-                    for (int j = i; j < size; j++) {
-                        matrixL[j][i] = matrixU[j][i] / matrixU[i][i];
-                    }
-                }
-
-                for (int i = k; i < size; i++) {
-                    for (int j = k - 1; j < size; j++) {
-                        matrixU[i][j] = matrixU[i][j] - matrixL[i][k - 1] * matrixU[k - 1][j];
-                    }
-                }
+                result[i] = Arrays.copyOf(arrayToCopy[i], arrayToCopy.length);
             }
         };
     }
